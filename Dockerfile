@@ -40,3 +40,7 @@ USER $user
 
 # Start Laravel server
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=10000"]
+
+COPY . /var/www
+RUN composer install && php artisan migrate && php artisan db:seed
+CMD php artisan serve --host=0.0.0.0 --port=10000
