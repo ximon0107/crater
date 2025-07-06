@@ -42,11 +42,14 @@ RUN useradd -G www-data,root -u $uid -d /home/$user $user && \
 # Set working directory
 WORKDIR /var/www
 
-# Switch to non-root user
-USER $user
-
 # Copy project files into the container
 COPY . /var/www
+
+# Fix file ownership so composer can create vendor dir
+RUN chown -R $user:$user /var/www
+
+# Switch to non-root user
+USER $user
 
 # Install PHP dependencies and run Laravel migrations/seeding non-interactively
 RUN composer install && php artisan migrate --force && php artisan db:seed --force
