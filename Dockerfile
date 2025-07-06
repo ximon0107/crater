@@ -1,9 +1,14 @@
+# Use PHP 8.1 FPM as the base image
 FROM php:8.1-fpm
+
+# Expose Laravel development server port
 EXPOSE 10000
 
+# Set build arguments for user creation
 ARG user=laraveluser
 ARG uid=1000
 
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -16,32 +21,35 @@ RUN apt-get update && apt-get install -y \
     libmagickwand-dev \
     mariadb-client
 
+# Clean up APT when done
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Install Imagick PHP extension
 RUN pecl install imagick \
     && docker-php-ext-enable imagick
 
+# Install required PHP extensions
 RUN docker-php-ext-install pdo_mysql mbstring zip exif pcntl bcmath gd
 
+# Copy Composer from official Composer image
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-RUN useradd -G www-data,root -u $uid -d /home/$user $user
-RUN mkdir -p /home/$user/.composer && \
+# Create non-root user for security
+RUN useradd -G www-data,root -u $uid -d /home/$user $user && \
+    mkdir -p /home/$user/.composer && \
     chown -R $user:$user /home/$user
 
+# Set working directory
 WORKDIR /var/www
 
-# Copy application files as root.
-COPY . /var/www
-
-# Fix the permissions for /var/www (so $user can write to vendor/)
-RUN chown -R $user:$user /var/www
-
-# Switch to the non-root user to run the rest of the steps.
+# Switch to non-root user
 USER $user
 
-# Install dependencies, migrate and seed the database.
-RUN composer install && php artisan migrate && php artisan db:seed
+# Copy project files into the container
+COPY . /var/www
 
-# Start Laravel's built-in server.
+# Install PHP dependencies and run Laravel migrations/seeding non-interactively
+RUN composer install && php artisan migrate --force && php artisan db:seed --force
+
+# Start Laravel development server on container start
 CMD php artisan serve --host=0.0.0.0 --port=10000
