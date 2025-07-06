@@ -1,11 +1,9 @@
-FROM php:8.1-cli
-
+FROM php:8.1-fpm
 EXPOSE 10000
 
 ARG user=laraveluser
 ARG uid=1000
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -18,28 +16,21 @@ RUN apt-get update && apt-get install -y \
     libmagickwand-dev \
     mariadb-client
 
-# Clear cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions
-RUN pecl install imagick && docker-php-ext-enable imagick
+RUN pecl install imagick \
+    && docker-php-ext-enable imagick
+
 RUN docker-php-ext-install pdo_mysql mbstring zip exif pcntl bcmath gd
 
-# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Create user
-RUN useradd -G www-data,root -u $uid -d /home/$user $user && \
-    mkdir -p /home/$user/.composer && \
+RUN useradd -G www-data,root -u $uid -d /home/$user $user
+RUN mkdir -p /home/$user/.composer && \
     chown -R $user:$user /home/$user
 
-# Set working directory
 WORKDIR /var/www
-
 USER $user
-
-# Start Laravel server
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=10000"]
 
 COPY . /var/www
 RUN composer install && php artisan migrate && php artisan db:seed
