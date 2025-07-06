@@ -1,5 +1,5 @@
 FROM php:8.1-fpm
-
+EXPOSE 10000
 # Arguments defined in docker-compose.yml
 ARG user=laraveluser
 ARG uid=1000
